@@ -4,11 +4,11 @@ git:
   depth: 1
 env:
   - GO111MODULE=on
-  - GOMAXPROCS=4
-  - GORACE=halt_on_error=1
 go: [1.12.x, 1.13.x, 1.14.x]
 os: [windows, linux, osx]
 script:
+  - export GOMAXPROCS=4
+  - export GORACE=halt_on_error=1
   - go build ./examples/main.go
   - go run ./examples/main.go
   - go test -v .
