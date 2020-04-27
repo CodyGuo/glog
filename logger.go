@@ -21,7 +21,7 @@ const (
 	LglogFlags    = LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix
 )
 
-var glog = New(os.Stdout)
+var glog = New(os.Stdout, WithCallDepth(5))
 
 type Logger struct {
 	mu        sync.Mutex
