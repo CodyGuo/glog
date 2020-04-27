@@ -1,6 +1,6 @@
 ## Golang log library
 
-[![godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/CodyGuo/glog) [![build](https://img.shields.io/travis/op/go-logging.svg?style=flat)](https://travis-ci.org/CodyGuo/glog)
+[![godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/CodyGuo/glog) [![build status](https://img.shields.io/travis/CodyGuo/glog/master.svg?style=flat-square)](https://travis-ci.org/CodyGuo/glog)
 
 Package glog implements a log infrastructure for Go.
 
