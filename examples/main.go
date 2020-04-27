@@ -12,7 +12,7 @@ func main() {
 
 	customLog := glog.New(os.Stdout,
 		glog.WithLevel(glog.DEBUG),
-		glog.WithFlags(glog.LstdFlags),
+		glog.WithFlags(glog.LglogFlags),
 		glog.WithPrefix("[customLog] "))
 
 	customLog.Debug("hello debug")

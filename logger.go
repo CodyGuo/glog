@@ -37,7 +37,7 @@ func New(out io.Writer, config ...Config) *Logger {
 		level:     INFO,
 		prefix:    "",
 		flag:      LstdFlags,
-		calldepth: 3,
+		calldepth: 4,
 	}
 	for _, c := range config {
 		c(l)
