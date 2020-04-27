@@ -8,6 +8,12 @@ func WithLevel(level Level) Config {
 	}
 }
 
+func WithLevelLength(levelLength uint8) Config {
+	return func(l *Logger) {
+		l.levelLength = levelLength
+	}
+}
+
 func WithPrefix(prefix string) Config {
 	return func(l *Logger) {
 		l.prefix = prefix

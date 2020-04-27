@@ -18,6 +18,20 @@ func TestWithLevel(t *testing.T) {
 	}
 }
 
+func TestWithLevelLength(t *testing.T) {
+	const want uint8 = 4
+	var buf bytes.Buffer
+	for _, testcase := range levelTests {
+		t.Run(testcase.name, func(t *testing.T) {
+			buf.Reset()
+			l := New(&buf, WithLevelLength(4))
+			if got := l.LevelLength(); got != want {
+				t.Errorf("LevelLength %s: expected %d, got %d", testcase.name, want, got)
+			}
+		})
+	}
+}
+
 func TestWithPrefix(t *testing.T) {
 	want := "[testPrefix]"
 	var buf bytes.Buffer

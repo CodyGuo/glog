@@ -24,26 +24,32 @@ const (
 var glog = New(os.Stdout, WithCallDepth(5))
 
 type Logger struct {
-	mu        sync.Mutex
-	level     Level
-	prefix    string
-	flag      int
-	calldepth int
-	stdLog    *log.Logger
+	mu          sync.Mutex
+	level       Level
+	levelLength uint8
+	prefix      string
+	flag        int
+	calldepth   int
+	stdLog      *log.Logger
 }
 
 func New(out io.Writer, config ...Config) *Logger {
 	l := &Logger{
-		level:     INFO,
-		prefix:    "",
-		flag:      LstdFlags,
-		calldepth: 4,
+		level:       INFO,
+		levelLength: levelMaxLength,
+		prefix:      "",
+		flag:        LstdFlags,
+		calldepth:   4,
 	}
 	for _, c := range config {
 		c(l)
 	}
 	l.stdLog = log.New(out, l.prefix, l.flag)
 	return l
+}
+
+func (l *Logger) Trace(v ...interface{}) {
+	l.log(TRACE, v...)
 }
 
 func (l *Logger) Debug(v ...interface{}) {
@@ -68,6 +74,10 @@ func (l *Logger) Error(v ...interface{}) {
 
 func (l *Logger) Critical(v ...interface{}) {
 	l.log(CRITICAL, v...)
+}
+
+func (l *Logger) Tracef(format string, v ...interface{}) {
+	l.logf(TRACE, format, v...)
 }
 
 func (l *Logger) Debugf(format string, v ...interface{}) {
@@ -107,9 +117,17 @@ func (l *Logger) output(level Level, s string) error {
 	if l.level > level {
 		return nil
 	}
+	levelStr := level.String()
+	end := level.Len()
+	if l.levelLength <= levelMaxLength && levelMinLength <= l.levelLength {
+		if l.levelLength < end {
+			end = l.levelLength
+		}
+		levelStr = levelStr[:end]
+	}
 	var buf bytes.Buffer
 	buf.Write([]byte("["))
-	buf.Write([]byte(level.String()))
+	buf.Write([]byte(levelStr))
 	buf.Write([]byte("] "))
 	buf.Write([]byte(s))
 
@@ -126,6 +144,18 @@ func (l *Logger) SetLevel(level Level) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.level = level
+}
+
+func (l *Logger) LevelLength() uint8 {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.levelLength
+}
+
+func (l *Logger) SetLevelLength(length uint8) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.levelLength = length
 }
 
 func (l *Logger) Prefix() string {
@@ -164,6 +194,10 @@ func (l *Logger) SetOutput(w io.Writer) {
 	l.stdLog.SetOutput(w)
 }
 
+func Trace(v ...interface{}) {
+	glog.Trace(v...)
+}
+
 func Debug(v ...interface{}) {
 	glog.Debug(v...)
 }
@@ -186,6 +220,10 @@ func Error(v ...interface{}) {
 
 func Critical(v ...interface{}) {
 	glog.Critical(v...)
+}
+
+func Tracef(format string, v ...interface{}) {
+	glog.Tracef(format, v...)
 }
 
 func Debugf(format string, v ...interface{}) {
@@ -218,6 +256,14 @@ func GetLevel() Level {
 
 func SetLevel(level Level) {
 	glog.SetLevel(level)
+}
+
+func LevelLength() uint8 {
+	return glog.LevelLength()
+}
+
+func SetLevelLength(length uint8) {
+	glog.SetLevelLength(length)
 }
 
 func Prefix() string {

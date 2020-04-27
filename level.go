@@ -1,7 +1,8 @@
 package glog
 
 const (
-	DEBUG Level = iota
+	TRACE Level = iota
+	DEBUG
 	INFO
 	NOTICE
 	WARNING
@@ -9,7 +10,13 @@ const (
 	CRITICAL
 )
 
-var levelNames = []string{
+var (
+	levelMinLength uint8 = 1
+	levelMaxLength uint8 = CRITICAL.Len()
+)
+
+var levelName = []string{
+	"TRACE",
 	"DEBUG",
 	"INFO",
 	"NOTICE",
@@ -22,7 +29,11 @@ type Level uint32
 
 func (l Level) String() string {
 	if l > CRITICAL {
-		return "None"
+		return "INVALID"
 	}
-	return levelNames[l]
+	return levelName[l]
+}
+
+func (l Level) Len() uint8 {
+	return uint8(len(l.String()))
 }

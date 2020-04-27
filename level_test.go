@@ -9,6 +9,7 @@ type levelTester struct {
 }
 
 var levelTests = []levelTester{
+	{"trace", TRACE, "TRACE"},
 	{"debug", DEBUG, "DEBUG"},
 	{"info", INFO, "INFO"},
 	{"notice", NOTICE, "NOTICE"},

@@ -11,10 +11,16 @@ func main() {
 	glog.Info("hello info")
 
 	customLog := glog.New(os.Stdout,
-		glog.WithLevel(glog.DEBUG),
+		glog.WithLevel(glog.TRACE),
+                glog.WithLevelLength(4),
 		glog.WithFlags(glog.LglogFlags),
 		glog.WithPrefix("[customLog] "))
 
+	customLog.Trace("hello trace")
 	customLog.Debug("hello debug")
 	customLog.Info("hello info")
+	customLog.Notice("hello notice")
+	customLog.Warning("hello warning")
+	customLog.Error("hello error")
+	customLog.Critical("hello critical")
 }
