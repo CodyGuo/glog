@@ -13,8 +13,9 @@ of the features found in this library.
 package main
 
 import (
-	"github.com/CodyGuo/glog"
 	"os"
+
+	"github.com/CodyGuo/glog"
 )
 
 func main() {
@@ -22,12 +23,18 @@ func main() {
 	glog.Info("hello info")
 
 	customLog := glog.New(os.Stdout,
-		glog.WithLevel(glog.DEBUG),
-		glog.WithFlags(glog.LstdFlags),
+		glog.WithLevel(glog.TRACE),
+                glog.WithLevelLength(4),
+		glog.WithFlags(glog.LglogFlags),
 		glog.WithPrefix("[customLog] "))
 
+	customLog.Trace("hello trace")
 	customLog.Debug("hello debug")
 	customLog.Info("hello info")
+	customLog.Notice("hello notice")
+	customLog.Warning("hello warning")
+	customLog.Error("hello error")
+	customLog.Critical("hello critical")
 }
 ```
 
