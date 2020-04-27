@@ -1,7 +1,7 @@
 /*
 Package glog implements a log infrastructure for Go:
 
-package main
+  package main
 
   import (
   	"os"
