@@ -324,3 +324,11 @@ func AutoCallDepth() {
 func ResetCallDepth() {
 	glog.SetCallDepth(currCallDepth + 2)
 }
+
+func Output() io.Writer {
+	return glog.Output()
+}
+
+func SetOutput(w io.Writer) {
+	glog.SetOutput(w)
+}
