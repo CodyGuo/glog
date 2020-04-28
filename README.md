@@ -45,6 +45,11 @@ func main() {
 
 You can use `go get -u` to update the package.
 
+## Go test
+    $ go test -bench . -benchmem
+    
+![image](https://github.com/CodyGuo/glog/doc/benchmem.png)
+
 ## Documentation
 
 For docs, see http://godoc.org/github.com/CodyGuo/glog or run:

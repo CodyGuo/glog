@@ -31,7 +31,7 @@ func TestCallDepth(t *testing.T) {
 	}
 }
 
-func BenchmarkLogPrintln(b *testing.B) {
+func BenchmarkStdLogPrintln(b *testing.B) {
 	const testString = "test"
 	var buf bytes.Buffer
 	l := log.New(&buf, "", log.LstdFlags)
@@ -51,7 +51,7 @@ func BenchmarkGLogInfo(b *testing.B) {
 	}
 }
 
-func BenchmarkLogPrintlnNoFlags(b *testing.B) {
+func BenchmarkStdLogPrintlnNoFlags(b *testing.B) {
 	const testString = "test"
 	var buf bytes.Buffer
 	l := log.New(&buf, "", 0)
