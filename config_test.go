@@ -44,7 +44,7 @@ func TestWithPrefix(t *testing.T) {
 func TestWithFlags(t *testing.T) {
 	want := LglogFlags
 	var buf bytes.Buffer
-	l := New(&buf, WithFlags(LstdFlags|Lmicroseconds|Lshortfile|Lmsgprefix))
+	l := New(&buf, WithFlags(LstdFlags|Lmicroseconds|Lshortfile|Lmsgprefix|Lmsglevel))
 	if got := l.Flags(); got != want {
 		t.Errorf("flag %d: expected: %d, got: %d",
 			LstdFlags|Lmicroseconds|Lshortfile|Lmsgprefix, want, got)

@@ -1,7 +1,6 @@
 package glog
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -17,8 +16,9 @@ const (
 	Lshortfile                    // final file name element and line number: d.go:23. overrides Llongfile
 	LUTC                          // if Ldate or Ltime is set, use UTC rather than the local time zone
 	Lmsgprefix                    // move the "prefix" from the beginning of the line to before the message
+	Lmsglevel                     // log level: [INFO]
 	LstdFlags     = Ldate | Ltime // initial values for the standard logger
-	LglogFlags    = LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix
+	LglogFlags    = LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix | Lmsglevel
 )
 
 const (
@@ -28,28 +28,27 @@ const (
 var glog = New(os.Stdout, WithCallDepth(currCallDepth+2))
 
 type Logger struct {
-	once          *sync.Once
-	mu            sync.Mutex
-	level         Level
-	levelLength   uint8
-	prefix        string
-	flag          int
-	currCalldepth int
-	calldepth     int
-	stdLog        *log.Logger
+	once        *sync.Once
+	mu          sync.Mutex
+	level       Level
+	levelLength uint8
+	prefix      string
+	flag        int
+	calldepth   int
+	buf         []byte
+	stdLog      *log.Logger
 }
 
 func New(out io.Writer, config ...Config) *Logger {
 	l := &Logger{
-		once:          &sync.Once{},
-		level:         INFO,
-		levelLength:   levelMaxLength,
-		prefix:        "",
-		flag:          LstdFlags,
-		currCalldepth: currCallDepth, // std log calldepth 2
+		once:        &sync.Once{},
+		level:       INFO,
+		levelLength: levelMaxLength,
+		prefix:      "",
+		flag:        LstdFlags,
 	}
-	// The caller's calldepth needs to be increased by 1
-	l.calldepth = l.currCalldepth + 1
+	// std log calldepth 2, The caller's calldepth needs to be increased by 1
+	l.calldepth = currCallDepth + 1
 	for _, c := range config {
 		c(l)
 	}
@@ -120,27 +119,33 @@ func (l *Logger) logf(level Level, format string, v ...interface{}) {
 	l.output(level, fmt.Sprintf(format, v...))
 }
 
+func (l *Logger) formatHeader(buf *[]byte, level Level) {
+	if l.flag&Lmsglevel != 0 {
+		s := level.String()
+		end := level.Len()
+		if l.levelLength <= levelMaxLength && levelMinLength <= l.levelLength {
+			if l.levelLength < end {
+				end = l.levelLength
+			}
+			s = s[:end]
+		}
+		*buf = append(*buf, '[')
+		*buf = append(*buf, s...)
+		*buf = append(*buf, ']')
+		*buf = append(*buf, ' ')
+	}
+}
+
 func (l *Logger) output(level Level, s string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.level > level {
 		return nil
 	}
-	levelStr := level.String()
-	end := level.Len()
-	if l.levelLength <= levelMaxLength && levelMinLength <= l.levelLength {
-		if l.levelLength < end {
-			end = l.levelLength
-		}
-		levelStr = levelStr[:end]
-	}
-	var buf bytes.Buffer
-	buf.Write([]byte("["))
-	buf.Write([]byte(levelStr))
-	buf.Write([]byte("] "))
-	buf.Write([]byte(s))
-
-	return l.stdLog.Output(l.calldepth, buf.String())
+	l.buf = l.buf[:0]
+	l.formatHeader(&l.buf, level)
+	l.buf = append(l.buf, s...)
+	return l.stdLog.Output(l.calldepth, string(l.buf))
 }
 
 func (l *Logger) Level() Level {
@@ -176,11 +181,16 @@ func (l *Logger) SetPrefix(prefix string) {
 }
 
 func (l *Logger) Flags() int {
-	return l.stdLog.Flags()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.flag
 }
 
 func (l *Logger) SetFlags(flag int) {
-	l.stdLog.SetFlags(flag)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.flag = flag
+	l.stdLog.SetFlags(l.flag)
 }
 
 func (l *Logger) CallDepth() int {
