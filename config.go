@@ -31,3 +31,9 @@ func WithCallDepth(calldepth int) Config {
 		l.calldepth = calldepth
 	}
 }
+
+func WithAutoCallDepth() Config {
+	return func(l *Logger) {
+		l.AutoCallDepth()
+	}
+}

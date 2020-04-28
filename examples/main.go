@@ -7,12 +7,16 @@ import (
 )
 
 func main() {
+	Info("hello info")
+	Infof("hello info")
+
+	glog.SetFlags(glog.LglogFlags)
 	glog.Debug("hello debug")
 	glog.Info("hello info")
 
 	customLog := glog.New(os.Stdout,
 		glog.WithLevel(glog.TRACE),
-                glog.WithLevelLength(4),
+		glog.WithLevelLength(4),
 		glog.WithFlags(glog.LglogFlags),
 		glog.WithPrefix("[customLog] "))
 

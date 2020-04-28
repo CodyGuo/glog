@@ -21,26 +21,35 @@ const (
 	LglogFlags    = LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix
 )
 
-var glog = New(os.Stdout, WithCallDepth(5))
+const (
+	currCallDepth = 3
+)
+
+var glog = New(os.Stdout, WithCallDepth(currCallDepth+2))
 
 type Logger struct {
-	mu          sync.Mutex
-	level       Level
-	levelLength uint8
-	prefix      string
-	flag        int
-	calldepth   int
-	stdLog      *log.Logger
+	once          *sync.Once
+	mu            sync.Mutex
+	level         Level
+	levelLength   uint8
+	prefix        string
+	flag          int
+	currCalldepth int
+	calldepth     int
+	stdLog        *log.Logger
 }
 
 func New(out io.Writer, config ...Config) *Logger {
 	l := &Logger{
-		level:       INFO,
-		levelLength: levelMaxLength,
-		prefix:      "",
-		flag:        LstdFlags,
-		calldepth:   4,
+		once:          &sync.Once{},
+		level:         INFO,
+		levelLength:   levelMaxLength,
+		prefix:        "",
+		flag:          LstdFlags,
+		currCalldepth: currCallDepth, // std log calldepth 2
 	}
+	// The caller's calldepth needs to be increased by 1
+	l.calldepth = l.currCalldepth + 1
 	for _, c := range config {
 		c(l)
 	}
@@ -186,6 +195,14 @@ func (l *Logger) SetCallDepth(calldepath int) {
 	l.calldepth = calldepath
 }
 
+func (l *Logger) AutoCallDepth() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.once.Do(func() {
+		l.calldepth = l.calldepth + 1
+	})
+}
+
 func (l *Logger) Output() io.Writer {
 	return l.stdLog.Writer()
 }
@@ -288,4 +305,12 @@ func CallDepth() int {
 
 func SetCallDepth(calldepth int) {
 	glog.SetCallDepth(calldepth)
+}
+
+func AutoCallDepth() {
+	glog.AutoCallDepth()
+}
+
+func ResetCallDepth() {
+	glog.SetCallDepth(currCallDepth + 2)
 }
