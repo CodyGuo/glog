@@ -48,7 +48,7 @@ You can use `go get -u` to update the package.
 ## Go test
     $ go test -bench . -benchmem
     
-![image](https://github.com/CodyGuo/glog/doc/benchmem.png)
+![image](<doc/benchmem.png>)
 
 ## Documentation
 
