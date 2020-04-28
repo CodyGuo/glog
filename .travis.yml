@@ -9,8 +9,10 @@ os: [windows, linux, osx]
 script:
   - export GOMAXPROCS=4
   - export GORACE=halt_on_error=1
-  - cd examples && go build
-  - go run ./examples/...
+  - cd examples
+  - go build
+  - examples
+  - cd ..
   - go test -v .
   - go test -race -v ./...
   - go test -bench . -v -benchmem
