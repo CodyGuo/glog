@@ -59,3 +59,13 @@ func TestWithCallDepth(t *testing.T) {
 		t.Errorf("calldepth 5: expected %d, got %d", want, got)
 	}
 }
+
+func TestWithAutoCallDepth(t *testing.T) {
+	want := 5
+	var buf bytes.Buffer
+	l := New(&buf, WithAutoCallDepth())
+	l.AutoCallDepth()
+	if got := l.CallDepth(); got != want {
+		t.Errorf("autoCallDepth 5: expected %d, got %d", want, got)
+	}
+}
