@@ -67,6 +67,46 @@ func (l *Logger) SetMultiOutput(writers ...io.Writer) {
 	l.out = io.MultiWriter(writers...)
 }
 
+func (l *Logger) SetFile(name string, flag int, perm os.FileMode) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	f, err := os.OpenFile(name, flag, perm)
+	if err != nil {
+		return err
+	}
+	l.closers = append(l.closers, f)
+	l.out = f
+	return nil
+}
+
+func (l *Logger) AddFile(name string, flag int, perm os.FileMode) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	f, err := os.OpenFile(name, flag, perm)
+	if err != nil {
+		return err
+	}
+	l.closers = append(l.closers, f)
+	l.out = io.MultiWriter(l.out, f)
+	return nil
+}
+
+func (l *Logger) SetWriteCloser(writeCloser io.WriteCloser) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.closers = append(l.closers, writeCloser)
+	l.out = writeCloser
+}
+
+func (l *Logger) AddWriteCloser(writeClosers ...io.WriteCloser) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for _, writeCloser := range writeClosers {
+		l.closers = append(l.closers, writeCloser)
+		l.out = io.MultiWriter(l.out, writeCloser)
+	}
+}
+
 // Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
 func itoa(buf *[]byte, i int, wid int) {
 	// Assemble decimal in reverse order.
@@ -342,6 +382,22 @@ func SetOutput(w io.Writer) {
 
 func SetMultiOutput(writers ...io.Writer) {
 	glog.SetMultiOutput(writers...)
+}
+
+func SetFile(name string, flag int, perm os.FileMode) error {
+	return glog.SetFile(name, flag, perm)
+}
+
+func AddFile(name string, flag int, perm os.FileMode) error {
+	return glog.AddFile(name, flag, perm)
+}
+
+func SetWriteCloser(writeCloser io.WriteCloser) {
+	glog.SetWriteCloser(writeCloser)
+}
+
+func AddWriteCloser(writeClosers ...io.WriteCloser) {
+	glog.AddWriteCloser(writeClosers...)
 }
 
 // Flags returns the output flags for the standard logger.
