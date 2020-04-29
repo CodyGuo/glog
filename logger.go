@@ -3,9 +3,11 @@ package glog
 import (
 	"fmt"
 	"io"
-	"log"
+	"io/ioutil"
 	"os"
+	"runtime"
 	"sync"
+	"time"
 )
 
 const (
@@ -21,39 +23,163 @@ const (
 	LglogFlags    = LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix | Lmsglevel
 )
 
-const (
-	currCallDepth = 3
-)
+var glog = New(os.Stderr, WithCallDepth(4))
 
-var glog = New(os.Stdout, WithCallDepth(currCallDepth+2))
+var Discard io.Writer = ioutil.Discard
 
 type Logger struct {
 	once        *sync.Once
 	mu          sync.Mutex
-	level       Level
-	levelLength uint8
+	out         io.Writer
+	closers     []io.Closer
 	prefix      string
 	flag        int
-	calldepth   int
+	callDepth   int
+	level       Level
+	levelLength uint8
 	buf         []byte
-	stdLog      *log.Logger
 }
 
-func New(out io.Writer, config ...Config) *Logger {
+func New(out io.Writer, options ...Option) *Logger {
 	l := &Logger{
-		once:        &sync.Once{},
-		level:       INFO,
-		levelLength: levelMaxLength,
-		prefix:      "",
-		flag:        LstdFlags,
+		out:       out,
+		once:      &sync.Once{},
+		prefix:    "",
+		flag:      LstdFlags,
+		callDepth: 3,
+		level:     INFO,
 	}
-	// std log calldepth 2, The caller's calldepth needs to be increased by 1
-	l.calldepth = currCallDepth + 1
-	for _, c := range config {
-		c(l)
+	for _, option := range options {
+		option(l)
 	}
-	l.stdLog = log.New(out, l.prefix, l.flag)
 	return l
+}
+func (l *Logger) SetOutput(w io.Writer) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.out = w
+}
+
+func (l *Logger) SetMultiOutput(writers ...io.Writer) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	writers = append(writers, l.out)
+	l.out = io.MultiWriter(writers...)
+}
+
+// Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
+func itoa(buf *[]byte, i int, wid int) {
+	// Assemble decimal in reverse order.
+	var b [20]byte
+	bp := len(b) - 1
+	for i >= 10 || wid > 1 {
+		wid--
+		q := i / 10
+		b[bp] = byte('0' + i - q*10)
+		bp--
+		i = q
+	}
+	// i < 10
+	b[bp] = byte('0' + i)
+	*buf = append(*buf, b[bp:]...)
+}
+
+// formatHeader writes log header to buf in following order:
+//   * l.prefix (if it's not blank and Lmsgprefix is unset),
+//   * date and/or time (if corresponding flags are provided),
+//   * file and line number (if corresponding flags are provided),
+//   * l.prefix (if it's not blank and Lmsgprefix is set).
+func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int, level Level) {
+	if l.flag&Lmsgprefix == 0 {
+		*buf = append(*buf, l.prefix...)
+	}
+	if l.flag&(Ldate|Ltime|Lmicroseconds) != 0 {
+		if l.flag&LUTC != 0 {
+			t = t.UTC()
+		}
+		if l.flag&Ldate != 0 {
+			year, month, day := t.Date()
+			itoa(buf, year, 4)
+			*buf = append(*buf, '/')
+			itoa(buf, int(month), 2)
+			*buf = append(*buf, '/')
+			itoa(buf, day, 2)
+			*buf = append(*buf, ' ')
+		}
+		if l.flag&(Ltime|Lmicroseconds) != 0 {
+			hour, min, sec := t.Clock()
+			itoa(buf, hour, 2)
+			*buf = append(*buf, ':')
+			itoa(buf, min, 2)
+			*buf = append(*buf, ':')
+			itoa(buf, sec, 2)
+			if l.flag&Lmicroseconds != 0 {
+				*buf = append(*buf, '.')
+				itoa(buf, t.Nanosecond()/1e3, 6)
+			}
+			*buf = append(*buf, ' ')
+		}
+	}
+	if l.flag&(Lshortfile|Llongfile) != 0 {
+		if l.flag&Lshortfile != 0 {
+			short := file
+			for i := len(file) - 1; i > 0; i-- {
+				if file[i] == '/' {
+					short = file[i+1:]
+					break
+				}
+			}
+			file = short
+		}
+		*buf = append(*buf, file...)
+		*buf = append(*buf, ':')
+		itoa(buf, line, -1)
+		*buf = append(*buf, ": "...)
+	}
+	if l.flag&Lmsgprefix != 0 {
+		*buf = append(*buf, l.prefix...)
+	}
+	if l.flag&Lmsglevel != 0 {
+		s := level.String()
+		end := level.Len()
+		if 0 < l.levelLength && l.levelLength < end {
+			end = l.levelLength
+			s = s[:end]
+		}
+		*buf = append(*buf, '[')
+		*buf = append(*buf, s...)
+		*buf = append(*buf, "] "...)
+	}
+}
+
+func (l *Logger) Output(level Level, s string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.level > level {
+		return nil
+	}
+	now := time.Now()
+	var file string
+	var line int
+	if l.flag&(Lshortfile|Llongfile) != 0 {
+		// Release lock while getting caller info - it's expensive.
+		l.mu.Unlock()
+		var ok bool
+		_, file, line, ok = runtime.Caller(l.callDepth)
+		if !ok {
+			file = "???"
+			line = 0
+		}
+		l.mu.Lock()
+	}
+	l.buf = l.buf[:0]
+	l.formatHeader(&l.buf, now, file, line, level)
+	l.buf = append(l.buf, s...)
+	if len(s) == 0 || s[len(s)-1] != '\n' {
+		l.buf = append(l.buf, '\n')
+	}
+	_, err := l.out.Write(l.buf)
+	return err
 }
 
 func (l *Logger) Trace(v ...interface{}) {
@@ -112,40 +238,35 @@ func (l *Logger) Criticalf(format string, v ...interface{}) {
 }
 
 func (l *Logger) log(level Level, v ...interface{}) {
-	l.output(level, fmt.Sprint(v...))
+	l.Output(level, fmt.Sprint(v...))
 }
 
 func (l *Logger) logf(level Level, format string, v ...interface{}) {
-	l.output(level, fmt.Sprintf(format, v...))
+	l.Output(level, fmt.Sprintf(format, v...))
 }
 
-func (l *Logger) formatHeader(buf *[]byte, level Level) {
-	if l.flag&Lmsglevel != 0 {
-		s := level.String()
-		end := level.Len()
-		if l.levelLength <= levelMaxLength && levelMinLength <= l.levelLength {
-			if l.levelLength < end {
-				end = l.levelLength
-			}
-			s = s[:end]
-		}
-		*buf = append(*buf, '[')
-		*buf = append(*buf, s...)
-		*buf = append(*buf, ']')
-		*buf = append(*buf, ' ')
-	}
-}
-
-func (l *Logger) output(level Level, s string) error {
+func (l *Logger) Flags() int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.level > level {
-		return nil
-	}
-	l.buf = l.buf[:0]
-	l.formatHeader(&l.buf, level)
-	l.buf = append(l.buf, s...)
-	return l.stdLog.Output(l.calldepth, string(l.buf))
+	return l.flag
+}
+
+func (l *Logger) SetFlags(flag int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.flag = flag
+}
+
+func (l *Logger) Prefix() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.prefix
+}
+
+func (l *Logger) SetPrefix(prefix string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.SetPrefix(prefix)
 }
 
 func (l *Logger) Level() Level {
@@ -172,53 +293,114 @@ func (l *Logger) SetLevelLength(length uint8) {
 	l.levelLength = length
 }
 
-func (l *Logger) Prefix() string {
-	return l.stdLog.Prefix()
-}
-
-func (l *Logger) SetPrefix(prefix string) {
-	l.stdLog.SetPrefix(prefix)
-}
-
-func (l *Logger) Flags() int {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.flag
-}
-
-func (l *Logger) SetFlags(flag int) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.flag = flag
-	l.stdLog.SetFlags(l.flag)
-}
-
 func (l *Logger) CallDepth() int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.calldepth
+	return l.callDepth
 }
 
 func (l *Logger) SetCallDepth(calldepath int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.calldepth = calldepath
+	l.callDepth = calldepath
 }
 
 func (l *Logger) AutoCallDepth() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.once.Do(func() {
-		l.calldepth = l.calldepth + 1
+		l.callDepth = l.callDepth + 1
 	})
 }
 
-func (l *Logger) Output() io.Writer {
-	return l.stdLog.Writer()
+func (l *Logger) Writer() io.Writer {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.out
 }
 
-func (l *Logger) SetOutput(w io.Writer) {
-	l.stdLog.SetOutput(w)
+func (l *Logger) Close() error {
+	if len(l.closers) == 0 {
+		return os.ErrInvalid
+	}
+	var errs []error
+	for _, closer := range l.closers {
+		if err := closer.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("%+v", errs)
+	}
+	return nil
+}
+
+// SetOutput sets the output destination for the standard logger.
+func SetOutput(w io.Writer) {
+	glog.SetOutput(w)
+}
+
+func SetMultiOutput(writers ...io.Writer) {
+	glog.SetMultiOutput(writers...)
+}
+
+// Flags returns the output flags for the standard logger.
+// The flag bits are Ldate, Ltime, and so on.
+func Flags() int {
+	return glog.Flags()
+}
+
+// SetFlags sets the output flags for the standard logger.
+// The flag bits are Ldate, Ltime, and so on.
+func SetFlags(flag int) {
+	glog.SetFlags(flag)
+}
+
+// Prefix returns the output prefix for the standard logger.
+func Prefix() string {
+	return glog.Prefix()
+}
+
+// SetPrefix sets the output prefix for the standard logger.
+func SetPrefix(prefix string) {
+	glog.SetPrefix(prefix)
+}
+
+func GetLevel() Level {
+	return glog.Level()
+}
+
+func SetLevel(level Level) {
+	glog.SetLevel(level)
+}
+
+func LevelLength() uint8 {
+	return glog.LevelLength()
+}
+
+func SetLevelLength(length uint8) {
+	glog.SetLevelLength(length)
+}
+
+func CallDepth() int {
+	return glog.CallDepth()
+}
+
+func SetCallDepth(calldepth int) {
+	glog.SetCallDepth(calldepth)
+}
+
+func AutoCallDepth() {
+	glog.AutoCallDepth()
+}
+
+func ResetCallDepth() {
+	glog.SetCallDepth(4)
+}
+
+// Writer returns the output destination for the standard logger.
+func Writer() io.Writer {
+	return glog.Writer()
 }
 
 func Trace(v ...interface{}) {
@@ -275,60 +457,4 @@ func Errorf(format string, v ...interface{}) {
 
 func Criticalf(format string, v ...interface{}) {
 	glog.Criticalf(format, v...)
-}
-
-func GetLevel() Level {
-	return glog.Level()
-}
-
-func SetLevel(level Level) {
-	glog.SetLevel(level)
-}
-
-func LevelLength() uint8 {
-	return glog.LevelLength()
-}
-
-func SetLevelLength(length uint8) {
-	glog.SetLevelLength(length)
-}
-
-func Prefix() string {
-	return glog.Prefix()
-}
-
-func SetPrefix(prefix string) {
-	glog.SetPrefix(prefix)
-}
-
-func Flags() int {
-	return glog.Flags()
-}
-
-func SetFlags(flag int) {
-	glog.SetFlags(flag)
-}
-
-func CallDepth() int {
-	return glog.CallDepth()
-}
-
-func SetCallDepth(calldepth int) {
-	glog.SetCallDepth(calldepth)
-}
-
-func AutoCallDepth() {
-	glog.AutoCallDepth()
-}
-
-func ResetCallDepth() {
-	glog.SetCallDepth(currCallDepth + 2)
-}
-
-func Output() io.Writer {
-	return glog.Output()
-}
-
-func SetOutput(w io.Writer) {
-	glog.SetOutput(w)
 }

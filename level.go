@@ -10,11 +10,6 @@ const (
 	CRITICAL
 )
 
-var (
-	levelMinLength uint8 = 1
-	levelMaxLength uint8 = CRITICAL.Len()
-)
-
 var levelName = []string{
 	"TRACE",
 	"DEBUG",

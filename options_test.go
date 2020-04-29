@@ -61,7 +61,7 @@ func TestWithCallDepth(t *testing.T) {
 }
 
 func TestWithAutoCallDepth(t *testing.T) {
-	want := 5
+	want := 4
 	var buf bytes.Buffer
 	l := New(&buf, WithAutoCallDepth())
 	l.AutoCallDepth()

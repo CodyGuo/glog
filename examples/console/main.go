@@ -27,9 +27,4 @@ func main() {
 	customLog.Warning("hello warning")
 	customLog.Error("hello error")
 	customLog.Critical("hello critical")
-
-	fileOpt := glog.WithFile("./aa/hello.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
-	glogFile := glog.New(os.Stderr, fileOpt, glog.WithFlags(glog.LglogFlags))
-	defer glogFile.Close()
-	glogFile.Info("hello info file")
 }
