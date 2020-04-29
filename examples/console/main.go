@@ -11,8 +11,8 @@ func main() {
 	Infof("hello info")
 
 	glog.SetFlags(glog.LglogFlags)
-	glog.Debug("hello debug")
-	glog.Info("hello info")
+	glog.Debug("hello debug", glog.CallDepth())
+	glog.Info("hello info", glog.CallDepth())
 
 	customLog := glog.New(os.Stdout,
 		glog.WithLevel(glog.TRACE),
@@ -27,4 +27,9 @@ func main() {
 	customLog.Warning("hello warning")
 	customLog.Error("hello error")
 	customLog.Critical("hello critical")
+
+	fileOpt := glog.WithFile("./aa/hello.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	glogFile := glog.New(os.Stderr, fileOpt, glog.WithFlags(glog.LglogFlags))
+	defer glogFile.Close()
+	glogFile.Info("hello info file")
 }
