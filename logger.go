@@ -320,6 +320,10 @@ func (l *Logger) Notice(v ...interface{}) {
 	l.log(NOTICE, v...)
 }
 
+func (l *Logger) Warn(v ...interface{}) {
+	l.log(WARNING, v...)
+}
+
 func (l *Logger) Warning(v ...interface{}) {
 	l.log(WARNING, v...)
 }
@@ -345,6 +349,10 @@ func (l *Logger) Infof(format string, v ...interface{}) {
 }
 func (l *Logger) Noticef(format string, v ...interface{}) {
 	l.logf(NOTICE, format, v...)
+}
+
+func (l *Logger) Warnf(format string, v ...interface{}) {
+	l.logf(WARNING, format, v...)
 }
 
 func (l *Logger) Warningf(format string, v ...interface{}) {
@@ -557,6 +565,10 @@ func Notice(v ...interface{}) {
 	glog.Notice(v...)
 }
 
+func Warn(v ...interface{}) {
+	glog.Warn(v...)
+}
+
 func Warning(v ...interface{}) {
 	glog.Warning(v...)
 }
@@ -583,6 +595,10 @@ func Infof(format string, v ...interface{}) {
 
 func Noticef(format string, v ...interface{}) {
 	glog.Noticef(format, v...)
+}
+
+func Warnf(format string, v ...interface{}) {
+	glog.Warnf(format, v...)
 }
 
 func Warningf(format string, v ...interface{}) {
