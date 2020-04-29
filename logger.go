@@ -265,7 +265,8 @@ func (l *Logger) jsonFormatHeader(buf *[]byte, t time.Time, file string, line in
 
 	jsonBytes, err := json.Marshal(&jsonData)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "json format failed, error: %v\n", err)
+		return
 	}
 	*buf = append(*buf, jsonBytes...)
 }
@@ -336,6 +337,11 @@ func (l *Logger) Critical(v ...interface{}) {
 	l.log(CRITICAL, v...)
 }
 
+func (l *Logger) Fatal(v ...interface{}) {
+	l.log(FATAL, v...)
+	os.Exit(1)
+}
+
 func (l *Logger) Tracef(format string, v ...interface{}) {
 	l.logf(TRACE, format, v...)
 }
@@ -365,6 +371,11 @@ func (l *Logger) Errorf(format string, v ...interface{}) {
 
 func (l *Logger) Criticalf(format string, v ...interface{}) {
 	l.logf(CRITICAL, format, v...)
+}
+
+func (l *Logger) Fatalf(format string, v ...interface{}) {
+	l.logf(FATAL, format, v...)
+	os.Exit(1)
 }
 
 func (l *Logger) log(level Level, v ...interface{}) {
@@ -581,6 +592,10 @@ func Critical(v ...interface{}) {
 	glog.Critical(v...)
 }
 
+func Fatal(v ...interface{}) {
+	glog.Fatal(v...)
+}
+
 func Tracef(format string, v ...interface{}) {
 	glog.Tracef(format, v...)
 }
@@ -611,4 +626,8 @@ func Errorf(format string, v ...interface{}) {
 
 func Criticalf(format string, v ...interface{}) {
 	glog.Criticalf(format, v...)
+}
+
+func Fatalf(format string, v ...interface{}) {
+	glog.Fatalf(format, v...)
 }

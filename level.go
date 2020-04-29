@@ -8,6 +8,7 @@ const (
 	WARNING
 	ERROR
 	CRITICAL
+	FATAL
 )
 
 var levelName = []string{
@@ -18,12 +19,13 @@ var levelName = []string{
 	"WARNING",
 	"ERROR",
 	"CRITICAL",
+	"FATAL",
 }
 
 type Level uint32
 
 func (l Level) String() string {
-	if l > CRITICAL {
+	if l > FATAL {
 		return "INVALID"
 	}
 	return levelName[l]

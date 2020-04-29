@@ -16,6 +16,7 @@ var levelTests = []levelTester{
 	{"warning", WARNING, "WARNING"},
 	{"error", ERROR, "ERROR"},
 	{"critical", CRITICAL, "CRITICAL"},
+	{"fatal", FATAL, "FATAL"},
 }
 
 func TestLevel(t *testing.T) {
