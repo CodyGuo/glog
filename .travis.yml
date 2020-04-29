@@ -10,9 +10,12 @@ script:
   - export GOMAXPROCS=4
   - export GORACE=halt_on_error=1
   - cd examples
-  - go build
-  - examples
+  - cd console && go build && console
   - cd ..
+  - cd consolefile && go build && consolefile
+  - cd ..
+  - cd file && go build && file
+  - cd ../..
   - go test -v .
   - go test -race -v ./...
   - go test -bench . -v -benchmem
