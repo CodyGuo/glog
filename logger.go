@@ -1,6 +1,7 @@
 package glog
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,6 +20,7 @@ const (
 	LUTC                          // if Ldate or Ltime is set, use UTC rather than the local time zone
 	Lmsgprefix                    // move the "prefix" from the beginning of the line to before the message
 	Lmsglevel                     // log level: [INFO]
+	Lmsgjson                      // log json format: {"message":"hello json"}
 	LstdFlags     = Ldate | Ltime // initial values for the standard logger
 	LglogFlags    = LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix | Lmsglevel
 )
@@ -129,6 +131,7 @@ func itoa(buf *[]byte, i int, wid int) {
 //   * date and/or time (if corresponding flags are provided),
 //   * file and line number (if corresponding flags are provided),
 //   * l.prefix (if it's not blank and Lmsgprefix is set).
+
 func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int, level Level) {
 	if l.flag&Lmsgprefix == 0 {
 		*buf = append(*buf, l.prefix...)
@@ -192,6 +195,81 @@ func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int, l
 	}
 }
 
+func (l *Logger) jsonFormatHeader(buf *[]byte, t time.Time, file string, line int, level Level, s string) {
+	var jsonData = struct {
+		Time    string `json:"time,omitempty"`
+		Level   string `json:"level,omitempty"`
+		File    string `json:"file,omitempty"`
+		Message string `json:"message"`
+	}{}
+	if l.flag&(Ldate|Ltime|Lmicroseconds) != 0 {
+		if l.flag&LUTC != 0 {
+			t = t.UTC()
+		}
+		if l.flag&Ldate != 0 {
+			year, month, day := t.Date()
+			itoa(buf, year, 4)
+			*buf = append(*buf, '/')
+			itoa(buf, int(month), 2)
+			*buf = append(*buf, '/')
+			itoa(buf, day, 2)
+			*buf = append(*buf, ' ')
+		}
+		if l.flag&(Ltime|Lmicroseconds) != 0 {
+			hour, min, sec := t.Clock()
+			itoa(buf, hour, 2)
+			*buf = append(*buf, ':')
+			itoa(buf, min, 2)
+			*buf = append(*buf, ':')
+			itoa(buf, sec, 2)
+			if l.flag&Lmicroseconds != 0 {
+				*buf = append(*buf, '.')
+				itoa(buf, t.Nanosecond()/1e3, 6)
+			}
+		}
+		jsonData.Time = string(*buf)
+		*buf = (*buf)[:0]
+	}
+	if l.flag&(Lshortfile|Llongfile) != 0 {
+		if l.flag&Lshortfile != 0 {
+			short := file
+			for i := len(file) - 1; i > 0; i-- {
+				if file[i] == '/' {
+					short = file[i+1:]
+					break
+				}
+			}
+			file = short
+		}
+		*buf = append(*buf, file...)
+		*buf = append(*buf, ':')
+		itoa(buf, line, -1)
+		jsonData.File = string(*buf)
+		*buf = (*buf)[:0]
+	}
+	if l.flag&Lmsglevel != 0 {
+		s := level.String()
+		end := level.Len()
+		if 0 < l.levelLength && l.levelLength < end {
+			end = l.levelLength
+			s = s[:end]
+		}
+		*buf = append(*buf, s...)
+		jsonData.Level = string(*buf)
+		*buf = (*buf)[:0]
+	}
+	*buf = append(*buf, l.prefix...)
+	*buf = append(*buf, s...)
+	jsonData.Message = string(*buf)
+	*buf = (*buf)[:0]
+
+	jsonBytes, err := json.Marshal(&jsonData)
+	if err != nil {
+		panic(err)
+	}
+	*buf = append(*buf, jsonBytes...)
+}
+
 func (l *Logger) Output(level Level, s string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -213,8 +291,12 @@ func (l *Logger) Output(level Level, s string) error {
 		l.mu.Lock()
 	}
 	l.buf = l.buf[:0]
-	l.formatHeader(&l.buf, now, file, line, level)
-	l.buf = append(l.buf, s...)
+	if l.flag&Lmsgjson != 0 {
+		l.jsonFormatHeader(&l.buf, now, file, line, level, s)
+	} else {
+		l.formatHeader(&l.buf, now, file, line, level)
+		l.buf = append(l.buf, s...)
+	}
 	if len(s) == 0 || s[len(s)-1] != '\n' {
 		l.buf = append(l.buf, '\n')
 	}

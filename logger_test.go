@@ -80,3 +80,34 @@ func BenchmarkLogRusInfo(b *testing.B) {
 		logrus.Info(testString)
 	}
 }
+
+func BenchmarkGLogJsonInfoNoFlags(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	l := New(&buf, WithFlags(0))
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		l.Info(testString)
+	}
+}
+
+func BenchmarkGLogJsonInfo(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	l := New(&buf, WithFlags(LglogFlags|Lmsgjson))
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		l.Info(testString)
+	}
+}
+
+func BenchmarkLogRusJsonInfo(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetOutput(&buf)
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		logrus.Info(testString)
+	}
+}
