@@ -339,6 +339,7 @@ func (l *Logger) Critical(v ...interface{}) {
 
 func (l *Logger) Fatal(v ...interface{}) {
 	l.log(FATAL, v...)
+	l.Close()
 	os.Exit(1)
 }
 
@@ -375,6 +376,7 @@ func (l *Logger) Criticalf(format string, v ...interface{}) {
 
 func (l *Logger) Fatalf(format string, v ...interface{}) {
 	l.logf(FATAL, format, v...)
+	l.Close()
 	os.Exit(1)
 }
 
