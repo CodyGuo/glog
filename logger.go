@@ -109,6 +109,24 @@ func (l *Logger) AddWriteCloser(writeClosers ...io.WriteCloser) {
 	}
 }
 
+func (l *Logger) Close() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if len(l.closers) == 0 {
+		return os.ErrInvalid
+	}
+	var errs []error
+	for _, closer := range l.closers {
+		if err := closer.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("%+v", errs)
+	}
+	return nil
+}
+
 // Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
 func itoa(buf *[]byte, i int, wid int) {
 	// Assemble decimal in reverse order.
@@ -304,6 +322,14 @@ func (l *Logger) Output(level Level, s string) error {
 	return err
 }
 
+func (l *Logger) log(level Level, v ...interface{}) {
+	l.Output(level, fmt.Sprint(v...))
+}
+
+func (l *Logger) logf(level Level, format string, v ...interface{}) {
+	l.Output(level, fmt.Sprintf(format, v...))
+}
+
 func (l *Logger) Trace(v ...interface{}) {
 	l.log(TRACE, v...)
 }
@@ -377,14 +403,6 @@ func (l *Logger) Fatalf(format string, v ...interface{}) {
 	l.logf(FATAL, format, v...)
 	l.Close()
 	os.Exit(1)
-}
-
-func (l *Logger) log(level Level, v ...interface{}) {
-	l.Output(level, fmt.Sprint(v...))
-}
-
-func (l *Logger) logf(level Level, format string, v ...interface{}) {
-	l.Output(level, fmt.Sprintf(format, v...))
 }
 
 func (l *Logger) Flags() int {
@@ -461,22 +479,6 @@ func (l *Logger) Writer() io.Writer {
 	return l.out
 }
 
-func (l *Logger) Close() error {
-	if len(l.closers) == 0 {
-		return os.ErrInvalid
-	}
-	var errs []error
-	for _, closer := range l.closers {
-		if err := closer.Close(); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if len(errs) > 0 {
-		return fmt.Errorf("%+v", errs)
-	}
-	return nil
-}
-
 // SetOutput sets the output destination for the standard logger.
 func SetOutput(w io.Writer) {
 	glog.SetOutput(w)
@@ -500,6 +502,10 @@ func SetWriteCloser(writeCloser io.WriteCloser) {
 
 func AddWriteCloser(writeClosers ...io.WriteCloser) {
 	glog.AddWriteCloser(writeClosers...)
+}
+
+func Close() error {
+	return glog.Close()
 }
 
 // Flags returns the output flags for the standard logger.
@@ -631,4 +637,8 @@ func Criticalf(format string, v ...interface{}) {
 
 func Fatalf(format string, v ...interface{}) {
 	glog.Fatalf(format, v...)
+}
+
+func Output(level Level, s string) error {
+	return glog.Output(level, s)
 }
