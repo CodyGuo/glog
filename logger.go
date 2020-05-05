@@ -131,7 +131,6 @@ func itoa(buf *[]byte, i int, wid int) {
 //   * date and/or time (if corresponding flags are provided),
 //   * file and line number (if corresponding flags are provided),
 //   * l.prefix (if it's not blank and Lmsgprefix is set).
-
 func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int, level Level) {
 	if l.flag&Lmsgprefix == 0 {
 		*buf = append(*buf, l.prefix...)
