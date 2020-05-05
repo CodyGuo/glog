@@ -62,7 +62,7 @@ func (l *Logger) SetOutput(w io.Writer) {
 	l.out = w
 }
 
-func (l *Logger) SetMultiOutput(writers ...io.Writer) {
+func (l *Logger) AddOutput(writers ...io.Writer) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	writers = append(writers, l.out)
@@ -482,8 +482,8 @@ func SetOutput(w io.Writer) {
 	glog.SetOutput(w)
 }
 
-func SetMultiOutput(writers ...io.Writer) {
-	glog.SetMultiOutput(writers...)
+func AddOutput(writers ...io.Writer) {
+	glog.AddOutput(writers...)
 }
 
 func SetFile(name string, flag int, perm os.FileMode) error {
