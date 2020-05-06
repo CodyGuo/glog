@@ -288,7 +288,7 @@ func (l *Logger) jsonFormatHeader(buf *[]byte, t time.Time, file string, line in
 	*buf = append(*buf, jsonBytes...)
 }
 
-func (l *Logger) Output(level Level, s string) error {
+func (l *Logger) Output(level Level, format string, v ...interface{}) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.level > level {
@@ -309,6 +309,12 @@ func (l *Logger) Output(level Level, s string) error {
 		l.mu.Lock()
 	}
 	l.buf = l.buf[:0]
+	var s string
+	if format == "" {
+		s = fmt.Sprint(v...)
+	} else {
+		s = fmt.Sprintf(format, v...)
+	}
 	if l.flag&Lmsgjson != 0 {
 		l.jsonFormatHeader(&l.buf, now, file, line, level, s)
 	} else {
@@ -323,11 +329,11 @@ func (l *Logger) Output(level Level, s string) error {
 }
 
 func (l *Logger) log(level Level, v ...interface{}) {
-	l.Output(level, fmt.Sprint(v...))
+	l.Output(level, "", v...)
 }
 
 func (l *Logger) logf(level Level, format string, v ...interface{}) {
-	l.Output(level, fmt.Sprintf(format, v...))
+	l.Output(level, format, v...)
 }
 
 func (l *Logger) Trace(v ...interface{}) {
@@ -639,6 +645,6 @@ func Fatalf(format string, v ...interface{}) {
 	glog.Fatalf(format, v...)
 }
 
-func Output(level Level, s string) error {
-	return glog.Output(level, s)
+func Output(level Level, format string, v ...interface{}) error {
+	return glog.Output(level, format, v...)
 }

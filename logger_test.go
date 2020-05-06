@@ -31,6 +31,16 @@ func TestCallDepth(t *testing.T) {
 	}
 }
 
+func BenchmarkStdLogPrintf(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	l := log.New(&buf, "", log.LstdFlags)
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		l.Printf("%s\n", testString)
+	}
+}
+
 func BenchmarkStdLogPrintln(b *testing.B) {
 	const testString = "test"
 	var buf bytes.Buffer
@@ -41,6 +51,26 @@ func BenchmarkStdLogPrintln(b *testing.B) {
 	}
 }
 
+func BenchmarkGLogTrace(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	l := New(&buf)
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		l.Trace(testString)
+	}
+}
+
+func BenchmarkGLogTracef(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	l := New(&buf)
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		l.Tracef("%s", testString)
+	}
+}
+
 func BenchmarkGLogInfo(b *testing.B) {
 	const testString = "test"
 	var buf bytes.Buffer
@@ -48,6 +78,16 @@ func BenchmarkGLogInfo(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
 		l.Info(testString)
+	}
+}
+
+func BenchmarkGLogInfof(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	l := New(&buf)
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		l.Infof("%s", testString)
 	}
 }
 
