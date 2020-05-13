@@ -432,7 +432,7 @@ func (l *Logger) Prefix() string {
 func (l *Logger) SetPrefix(prefix string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.SetPrefix(prefix)
+	l.prefix = prefix
 }
 
 func (l *Logger) Level() Level {
