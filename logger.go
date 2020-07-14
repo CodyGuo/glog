@@ -374,6 +374,12 @@ func (l *Logger) Fatal(v ...interface{}) {
 	os.Exit(1)
 }
 
+func (l *Logger) Panic(v ...interface{}) {
+	l.log(PANIC, v...)
+	l.Close()
+	panic(fmt.Sprint(v...))
+}
+
 func (l *Logger) Tracef(format string, v ...interface{}) {
 	l.logf(TRACE, format, v...)
 }
@@ -409,6 +415,12 @@ func (l *Logger) Fatalf(format string, v ...interface{}) {
 	l.logf(FATAL, format, v...)
 	l.Close()
 	os.Exit(1)
+}
+
+func (l *Logger) Panicf(format string, v ...interface{}) {
+	l.logf(PANIC, format, v...)
+	l.Close()
+	panic(fmt.Sprintf(format, v...))
 }
 
 func (l *Logger) Flags() int {
@@ -609,6 +621,10 @@ func Fatal(v ...interface{}) {
 	glog.Fatal(v...)
 }
 
+func Panic(v ...interface{}) {
+	glog.Panic(v...)
+}
+
 func Tracef(format string, v ...interface{}) {
 	glog.Tracef(format, v...)
 }
@@ -643,6 +659,10 @@ func Criticalf(format string, v ...interface{}) {
 
 func Fatalf(format string, v ...interface{}) {
 	glog.Fatalf(format, v...)
+}
+
+func Panicf(format string, v ...interface{}) {
+	glog.Panicf(format, v...)
 }
 
 func Output(level Level, format string, v ...interface{}) error {

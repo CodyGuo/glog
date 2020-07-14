@@ -27,4 +27,5 @@ func main() {
 	customLog.Warning("hello warning")
 	customLog.Error("hello error")
 	customLog.Critical("hello critical")
+	customLog.Panic("hello panic")
 }
