@@ -29,6 +29,8 @@ var glog = New(os.Stderr, WithCallDepth(4), WithFlags(LglogFlags))
 
 var Discard io.Writer = ioutil.Discard
 
+type Fields map[string]interface{}
+
 type Logger struct {
 	once        *sync.Once
 	mu          sync.Mutex
