@@ -25,7 +25,7 @@ const (
 	LglogFlags    = LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix | Lmsglevel
 )
 
-var glog = New(os.Stderr, WithCallDepth(4))
+var glog = New(os.Stderr, WithCallDepth(4), WithFlags(LglogFlags))
 
 var Discard io.Writer = ioutil.Discard
 
